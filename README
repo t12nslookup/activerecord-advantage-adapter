@@ -1,0 +1,66 @@
+=Advantage ActiveRecord Driver
+
+This is a Advantage driver for Ruby ActiveRecord. This driver requires the
+native Advantage Ruby driver. To get the native driver, use:
+
+   gem install advantage
+
+This driver is designed for use with ActiveRecord 3.2.0 and greater.
+
+This driver is licensed under the Apache License, Version 2.
+
+==Making a Connection
+
+The following code is a sample database configuration object.
+
+  ActiveRecord::Base.configurations = {
+    'arunit' => {
+      :adapter  => 'advantage',
+      :database => 'c:\test\arunit.add',        #equivalent to the "Data Source" parameter
+      :username => 'adssys',                    #equivalent to the "UserID" parameter
+      :password => ''                           #equivalent to the "Password" parameter
+  }
+
+==Creating a new project.  The following is based on the tutorial at http://edgeguides.rubyonrails.org/getting_started.html
+
+1. Create the application:
+        rails new blog
+
+2. Switch into the new application folder
+        cd blog
+
+3. Create three databases.  This can be done via ARC using SQL
+        CREATE DATABASE "c:\blog\dbprod\blog_production.add";
+        CREATE DATABASE "c:\blog\dbtest\blog_test.add";
+        CREATE DATABASE "c:\blog\dbdev\blog_dev.add";
+
+4. Edit the file GemFile and add the activerecord-advantage-adapter
+   gem 'activerecord-advantage-adapter'
+
+5. Edit the config/database.yml file to match the following
+
+development:
+  adapter: advantage
+  database: c:/blog/dbdev/blog_dev.add
+  username: adssys
+  password:
+
+# Warning: The database defined as "test" will be erased and
+# re-generated from your development database when you run "rake".
+# Do not set this db to the same as development or production.
+test:
+  adapter: advantage
+  database: c:/blog/dbtest/blog_test.add
+  username: adssys
+  password:
+
+production:
+  adapter: advantage
+  database: c:/blog/dbprod/blog_production.add
+  username: adssys
+  password:
+
+
+
+
+
