@@ -53,7 +53,7 @@ module ActiveRecord
       raise ArgumentError, "No data source was given. Please add a :database option." unless config.has_key?(:database)
 
       connection_string = "data source=#{config[:database]};User ID=#{config[:username]};"
-      connection_string += "Password=#{config[:password]};" unless config[:options].nil?
+      connection_string += "Password=#{config[:password]};" unless config[:password].nil?
       connection_string += "#{config[:options]};" unless config[:options].nil?
       connection_string += "DateFormat=YYYY-MM-DD;"
 
