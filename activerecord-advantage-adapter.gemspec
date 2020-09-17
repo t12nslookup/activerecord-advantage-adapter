@@ -34,7 +34,7 @@ Gem::Specification.new do |spec|
   spec.files         = Dir.chdir(File.expand_path('..', __FILE__)) do
     `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   end
-  spec.files = Dir["{test,lib,ext}/**/*",
+  spec.files = Dir["{test,lib}/**/*",
                    'LICENSE',
                    'README',
                    'activerecord-advantage-adapter.gemspec']
@@ -44,5 +44,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', '~> 10.0'
   spec.add_development_dependency 'rspec', '~> 3.0'
 
+  spec.add_runtime_dependency 'advantage', '~> 0.1', '>= 0.1.1'
 
 end
