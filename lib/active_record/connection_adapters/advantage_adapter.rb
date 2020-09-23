@@ -323,8 +323,7 @@ module ActiveRecord
 
       # Retrieve a list of Tables
       def data_source_sql(name = nil, type: nil) #:nodoc:
-        # "EXECUTE PROCEDURE sp_GetTables( NULL, NULL, '#{name}', 'TABLE' );"
-        "SELECT '#{name}' from system.iota;"
+        "SELECT table_name from (EXECUTE PROCEDURE sp_GetTables( NULL, NULL, 'DISCOUNT', 'TABLE' )) spgc where table_cat <> 'system';"
       end
 
       # Retrieve a list of Tables
@@ -533,8 +532,10 @@ SQL
             row = []
             max_cols.times do |cols|
               # result[ADS.instance.api.ads_get_column_info(rs, cols)[2]] = ADS.instance.api.ads_get_column(rs, cols)[1]
-              cinfo = ADS.instance.api.ads_get_column_info(rs, cols)
-              all_cols << cinfo[2]
+              if row_record.count == 0 then
+                cinfo = ADS.instance.api.ads_get_column_info(rs, cols)
+                all_cols << cinfo[2]
+              end
               cvalue = ADS.instance.api.ads_get_column(rs, cols)
               row << cvalue[1]
             end
@@ -546,6 +547,7 @@ SQL
         end
         ADS.instance.api.ads_free_stmt(rs)
 
+        all_cols.uniq!
         return all_cols, row_record
       end
     end
