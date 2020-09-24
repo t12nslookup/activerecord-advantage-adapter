@@ -237,7 +237,7 @@ module ActiveRecord
       end
 
       # The Database insert function as part of the rails changes
-      def exec_insert(sql, name = nil, binds = []) #:nodoc:
+      def exec_insert(sql, name = nil, binds = [], pk = nil, sequence_name = nil) #:nodoc:
         log(sql, "insert", binds) { exec_query(sql, binds) }
       end
 
@@ -454,8 +454,8 @@ SQL
       # Nullability is returned as 0 (no nulls allowed) or 1 (nulls allowed)
       # Alos, ActiveRecord expects an autoincrement column to have default value of NULL
       def table_structure(table_name)
-        sql = "SELECT COLUMN_NAME, IIF(COLUMN_DEF = 'NULL', null, COLUMN_DEF) as COLUMN_DEF, IIF(TYPE_NAME = 'NUMERIC' and DECIMAL_DIGITS = 0, 'INTEGER', TYPE_NAME) as TYPE_NAME, NULLABLE from (EXECUTE PROCEDURE sp_GetColumns( NULL, NULL, '#{table_name}', NULL )) spgc where table_cat <> 'system';"
-        # sql = "SELECT COLUMN_NAME, IIF(COLUMN_DEF = 'NULL', null, COLUMN_DEF) as COLUMN_DEF, TYPE_NAME, NULLABLE from (EXECUTE PROCEDURE sp_GetColumns( NULL, NULL, '#{table_name}', NULL )) spgc where table_cat <> 'system';"
+        # sql = "SELECT COLUMN_NAME, IIF(COLUMN_DEF = 'NULL', null, COLUMN_DEF) as COLUMN_DEF, IIF(TYPE_NAME = 'NUMERIC' and DECIMAL_DIGITS = 0, 'INTEGER', TYPE_NAME) as TYPE_NAME, NULLABLE from (EXECUTE PROCEDURE sp_GetColumns( NULL, NULL, '#{table_name}', NULL )) spgc where table_cat <> 'system';"
+        sql = "SELECT COLUMN_NAME, IIF(COLUMN_DEF = 'NULL', null, COLUMN_DEF) as COLUMN_DEF, TYPE_NAME, NULLABLE from (EXECUTE PROCEDURE sp_GetColumns( NULL, NULL, '#{table_name}', NULL )) spgc where table_cat <> 'system';"
         structure = exec_query(sql, :skip_logging)
         raise(ActiveRecord::StatementInvalid, "Could not find table '#{table_name}'") if structure == false
         structure.to_ary
@@ -524,17 +524,19 @@ SQL
           raise AdvantageException.new(errstr, result, sql)
         end
 
+        # the record of all the rows
         row_record = []
-        all_cols = []
+        # the column headers
+        col_headers = []
         if (ADS.instance.api.ads_num_cols(rs) > 0)
           while ADS.instance.api.ads_fetch_next(rs) == 1
             max_cols = ADS.instance.api.ads_num_cols(rs)
             row = []
             max_cols.times do |cols|
-              # result[ADS.instance.api.ads_get_column_info(rs, cols)[2]] = ADS.instance.api.ads_get_column(rs, cols)[1]
+              # record the columns the first time through the results
               if row_record.count == 0 then
                 cinfo = ADS.instance.api.ads_get_column_info(rs, cols)
-                all_cols << cinfo[2]
+                col_headers << cinfo[2]
               end
               cvalue = ADS.instance.api.ads_get_column(rs, cols)
               row << cvalue[1]
@@ -547,8 +549,9 @@ SQL
         end
         ADS.instance.api.ads_free_stmt(rs)
 
-        all_cols.uniq!
-        return all_cols, row_record
+        # force the columns to be unique (I don't believe this does anything now)
+        col_headers.uniq!
+        return col_headers, row_record
       end
     end
   end
