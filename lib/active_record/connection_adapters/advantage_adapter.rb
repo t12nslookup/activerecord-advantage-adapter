@@ -322,8 +322,8 @@ module ActiveRecord
       end
 
       # Retrieve a list of Tables
-      def data_source_sql(name = nil, type: nil) #:nodoc:
-        "SELECT table_name from (EXECUTE PROCEDURE sp_GetTables( NULL, NULL, 'DISCOUNT', 'TABLE' )) spgc where table_cat <> 'system';"
+      def data_source_sql(name = nil, type = nil) #:nodoc:
+        "SELECT table_name from (EXECUTE PROCEDURE sp_GetTables( NULL, NULL, '#{name}', 'TABLE' )) spgc where table_cat <> 'system';"
       end
 
       # Retrieve a list of Tables
@@ -534,7 +534,7 @@ SQL
             row = []
             max_cols.times do |cols|
               # record the columns the first time through the results
-              if row_record.count == 0 then
+              if row_record.count == 0
                 cinfo = ADS.instance.api.ads_get_column_info(rs, cols)
                 col_headers << cinfo[2]
               end
