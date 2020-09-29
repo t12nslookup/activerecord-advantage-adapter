@@ -97,14 +97,11 @@ module ActiveRecord
 
       # JAD Is this helpful?
       def initialize_type_map(m = type_map)
-        m.register_type "logical", Type::Boolean.new
-        m.register_type "varchar", Type::Text.new
-        m.alias_type "char", "varchar"
-        m.alias_type "memo", "varchar"
-        m.register_type "long binary", Type::Binary.new
-        m.register_type "integer", Type::Integer.new(limit: 5)
-        m.alias_type "short", "integer"
-        m.register_type "autoinc", Type::Integer.new(limit: 5)
+        m.alias_type %r(memo)i, "char"
+        m.alias_type %r(long binary)i, "binary"
+        m.alias_type %r(integer)i, "int"
+        m.alias_type %r(short)i, "int"
+        m.alias_type %r(autoinc)i, "int"
         super
       end
     end
@@ -269,19 +266,6 @@ module ActiveRecord
       # Returns a query as an array of arrays
       def select_rows(sql, name = nil)
         exec_query(sql, name).rows
-        #        rs = ADS.instance.api.ads_execute_direct(@connection, sql)
-        #        raise ActiveRecord::StatementInvalid.new("#{ADS.instance.api.ads_error(@connection)}:#{sql}") if rs.nil?
-        #        record = []
-        #        while ADS.instance.api.ads_fetch_next(rs) == 1
-        #          max_cols = ADS.instance.api.ads_num_cols(rs)
-        #          result = Array.new(max_cols)
-        #          max_cols.times do |cols|
-        #            result[cols] = ADS.instance.api.ads_get_column(rs, cols)[1]
-        #          end
-        #          record << result
-        #        end
-        #        ADS.instance.api.ads_free_stmt(rs)
-        #        return record
       end
 
       # Begin a transaction
@@ -335,10 +319,23 @@ module ActiveRecord
       # Return a list of columns
       def columns(table_name, name = nil) #:nodoc:
         table_structure(table_name).map do |field|
-          AdvantageColumn.new(strip_or_self(field["COLUMN_NAME"]),
-                              field["COLUMN_DEF"],
-                              SqlTypeMetadata.new(sql_type: strip_or_self(field["TYPE_NAME"])),
-                              field["NULLABLE"])
+          if Rails::VERSION::MAJOR > 4
+            AdvantageColumn.new(strip_or_self(field["COLUMN_NAME"]),
+                                field["COLUMN_DEF"],
+                                SqlTypeMetadata.new(sql_type: strip_or_self(field["TYPE_NAME"])),
+                                field["NULLABLE"])
+          elsif Rails::VERSION::MAJOR == 4
+            AdvantageColumn.new(strip_or_self(field["COLUMN_NAME"]),
+                                field["COLUMN_DEF"],
+                                lookup_cast_type(strip_or_self(field["TYPE_NAME"])),
+                                strip_or_self(field["TYPE_NAME"]),
+                                field["NULLABLE"])
+          else
+            AdvantageColumn.new(strip_or_self(field["COLUMN_NAME"]),
+                                field["COLUMN_DEF"],
+                                strip_or_self(field["TYPE_NAME"]),
+                                field["NULLABLE"])
+          end
         end
       end
 
@@ -443,8 +440,11 @@ SQL
 
       # Execute a query
       def select(sql, name = nil, binds = []) #:nodoc:
-        # return execute(sql, name, binds)
-        exec_query(sql, name, binds)
+        if Rails::VERSION::MAJOR >= 4
+          exec_query(sql, name, binds)
+        else
+          exec_query(sql, name, binds).to_hash
+        end
       end
 
       # Queries the structure of a table including the columns names, defaults, type, and nullability
@@ -458,7 +458,7 @@ SQL
         sql = "SELECT COLUMN_NAME, IIF(COLUMN_DEF = 'NULL', null, COLUMN_DEF) as COLUMN_DEF, TYPE_NAME, NULLABLE from (EXECUTE PROCEDURE sp_GetColumns( NULL, NULL, '#{table_name}', NULL )) spgc where table_cat <> 'system';"
         structure = exec_query(sql, :skip_logging)
         raise(ActiveRecord::StatementInvalid, "Could not find table '#{table_name}'") if structure == false
-        structure.to_ary
+        structure
       end
 
       # Required to prevent DEFAULT NULL being added to primary keys
