@@ -78,6 +78,7 @@ module ActiveRecord
       private
 
       # Overridden to handle Advantage integer, varchar, binary, and timestamp types
+      # Rails 4 does not use this.
       def simplified_type(field_type)
         case field_type
         when /logical/i
@@ -94,16 +95,6 @@ module ActiveRecord
           super
         end
       end
-
-      # JAD Is this helpful?
-      def initialize_type_map(m = type_map)
-        m.alias_type %r(memo)i, "char"
-        m.alias_type %r(long binary)i, "binary"
-        m.alias_type %r(integer)i, "int"
-        m.alias_type %r(short)i, "int"
-        m.alias_type %r(autoinc)i, "int"
-        super
-      end
     end
 
     class AdvantageAdapter < AbstractAdapter
@@ -118,7 +109,7 @@ module ActiveRecord
       end
 
       def adapter_name #:nodoc:
-        "Advantage"
+        'Advantage'
       end
 
       def supports_migrations? #:nodoc:
@@ -130,13 +121,13 @@ module ActiveRecord
       end
 
       def active? #:nodoc:
-        ADS.instance.api.ads_execute_immediate(@connection, "SELECT 1 FROM SYSTEM.IOTA") == 1
-      rescue
+        ADS.instance.api.ads_execute_immediate(@connection, 'SELECT 1 FROM SYSTEM.IOTA') == 1
+      rescue StandardError
         false
       end
 
       def disconnect! #:nodoc:
-        result = ADS.instance.api.ads_disconnect(@connection)
+        _result = ADS.instance.api.ads_disconnect(@connection)
         super
       end
 
@@ -180,20 +171,21 @@ module ActiveRecord
 
       # Applies quotations around column names in generated queries
       def quote_column_name(name) #:nodoc:
-        %Q("#{name}")
+        %("#{name}")
       end
 
       def quoted_true #:nodoc:
-        "1"
+        '1'
       end
 
       def quoted_false #:nodoc:
-        "0"
+        '0'
       end
 
       # Translate the exception if possible
       def translate_exception(exception, message) #:nodoc:
         return super unless exception.respond_to?(:errno)
+
         case exception.errno
         when 2121
           if exception.sql !~ /^SELECT/i
@@ -214,13 +206,13 @@ module ActiveRecord
       # The database update function.
       def update_sql(sql, name = nil) #:nodoc:
         execute(sql, name)
-        return @affected_rows
+        @affected_rows
       end
 
       # The database delete function.
       def delete_sql(sql, name = nil) #:nodoc:
         execute(sql, name)
-        return @affected_rows
+        @affected_rows
       end
 
       # The database insert function.
@@ -228,37 +220,38 @@ module ActiveRecord
       # by immediatly querying the @@identity property. If the @@identity property is 0, then passed id_value is used
       def insert_sql(sql, name = nil, pk = nil, id_value = nil, sequence_name = nil) #:nodoc:
         execute(sql, name)
-        identity = last_inserted_id(nil)
+        _identity = last_inserted_id(nil)
         retval = id_value if retval == 0
-        return retval
+        retval
       end
 
       # The Database insert function as part of the rails changes
-      def exec_insert(sql, name = nil, binds = [], pk = nil, sequence_name = nil) #:nodoc:
-        log(sql, "insert", binds) { exec_query(sql, binds) }
+      def exec_insert(sql, _name = nil, binds = [], _pk = nil, _sequence_name = nil) #:nodoc:
+        log(sql, 'insert', binds) { exec_query(sql, binds) }
       end
 
       # The Database update function as part of the rails changes
-      def exec_update(sql, name = nil, binds = []) #:nodoc:
-        log(sql, "update", binds) { exec_query(sql, binds) }
+      def exec_update(sql, _name = nil, binds = []) #:nodoc:
+        log(sql, 'update', binds) { exec_query(sql, binds) }
       end
 
       # The Database delete function as part of the rails changes
-      def exec_delete(sql, name = nil, binds = []) #:nodoc:
-        log(sql, "delete", binds) { exec_query(sql, binds) }
+      def exec_delete(sql, _name = nil, binds = []) #:nodoc:
+        log(sql, 'delete', binds) { exec_query(sql, binds) }
       end
 
-      def exec_query(sql, name = "SQL", binds = [])
+      def exec_query(sql, name = "SQL", _binds = [])
         cols, record = execute(sql, name)
         ActiveRecord::Result.new(cols, record)
       end
 
       # Retrieve the last AutoInc ID
-      def last_inserted_id(result) #:nodoc:
-        rs = ADS.instance.api.ads_execute_direct(@connection, "SELECT LASTAUTOINC( CONNECTION ) FROM SYSTEM.IOTA")
+      def last_inserted_id(_result) #:nodoc:
+        rs = ADS.instance.api.ads_execute_direct(@connection, 'SELECT LASTAUTOINC( CONNECTION ) FROM SYSTEM.IOTA')
         raise ActiveRecord::StatementInvalid.new("#{ADS.instance.api.ads_error(@connection)}:#{sql}") if rs.nil?
+
         ADS.instance.api.ads_fetch_next(rs)
-        retval, identity = ADS.instance.api.ads_get_column(rs, 0)
+        _retval, identity = ADS.instance.api.ads_get_column(rs, 0)
         ADS.instance.api.ads_free_stmt(rs)
         identity
       end
@@ -292,10 +285,10 @@ module ActiveRecord
 
       # Advantage does not support sizing of integers based on the sytax INTEGER(size).
       def type_to_sql(type, limit = nil, precision = nil, scale = nil) #:nodoc:
-        if native = native_database_types[type]
+        if native_database_types[type]
           if type == :integer
-            column_type_sql = "integer"
-          elsif type == :string and !limit.nil?
+            'integer'
+          elsif type == :string && !limit.nil?
             "varchar (#{limit})"
           else
             super(type, limit, precision, scale)
@@ -306,35 +299,35 @@ module ActiveRecord
       end
 
       # Retrieve a list of Tables
-      def data_source_sql(name = nil, type = nil) #:nodoc:
+      def data_source_sql(name = nil, _type = nil) #:nodoc:
         "SELECT table_name from (EXECUTE PROCEDURE sp_GetTables( NULL, NULL, '#{name}', 'TABLE' )) spgc where table_cat <> 'system';"
       end
 
       # Retrieve a list of Tables
       def tables(name = nil) #:nodoc:
         sql = "EXECUTE PROCEDURE sp_GetTables( NULL, NULL, NULL, 'TABLE' );"
-        select(sql, name).map { |row| strip_or_self(row["TABLE_NAME"]) }
+        select(sql, name).map { |row| strip_or_self(row['TABLE_NAME']) }
       end
 
       # Return a list of columns
-      def columns(table_name, name = nil) #:nodoc:
+      def columns(table_name, _name = nil) #:nodoc:
         table_structure(table_name).map do |field|
           if Rails::VERSION::MAJOR > 4
-            AdvantageColumn.new(strip_or_self(field["COLUMN_NAME"]),
-                                field["COLUMN_DEF"],
-                                SqlTypeMetadata.new(sql_type: strip_or_self(field["TYPE_NAME"])),
-                                field["NULLABLE"])
+            AdvantageColumn.new(strip_or_self(field['COLUMN_NAME']),
+                                field['COLUMN_DEF'],
+                                fetch_type_metadata(strip_or_self(field['TYPE_NAME'])),
+                                field['NULLABLE'])
           elsif Rails::VERSION::MAJOR == 4
-            AdvantageColumn.new(strip_or_self(field["COLUMN_NAME"]),
-                                field["COLUMN_DEF"],
-                                lookup_cast_type(strip_or_self(field["TYPE_NAME"])),
-                                strip_or_self(field["TYPE_NAME"]),
-                                field["NULLABLE"])
+            AdvantageColumn.new(strip_or_self(field['COLUMN_NAME']),
+                                field['COLUMN_DEF'],
+                                lookup_cast_type(strip_or_self(field['TYPE_NAME'])),
+                                strip_or_self(field['TYPE_NAME']),
+                                field['NULLABLE'])
           else
-            AdvantageColumn.new(strip_or_self(field["COLUMN_NAME"]),
-                                field["COLUMN_DEF"],
-                                strip_or_self(field["TYPE_NAME"]),
-                                field["NULLABLE"])
+            AdvantageColumn.new(strip_or_self(field['COLUMN_NAME']),
+                                field['COLUMN_DEF'],
+                                strip_or_self(field['TYPE_NAME']),
+                                field['NULLABLE'])
           end
         end
       end
@@ -342,13 +335,17 @@ module ActiveRecord
       # Return a list of indexes
       # EJS - Is there a way to get info without DD?
       def indexes(table_name, name = nil) #:nodoc:
-        sql = "SELECT name, INDEX_OPTIONS & 1 AS [unique], index_expression FROM SYSTEM.INDEXES WHERE parent = '#{table_name}'"
+        sql = "SELECT INDEX_NAME, COLUMN_NAME, NON_UNIQUE FROM (EXECUTE PROCEDURE sp_GetIndexInfo( NULL, NULL, '#{table_name}', NULL, FALSE)) as gii"
         select(sql, name).map do |row|
-          index = IndexDefinition.new(table_name, row["name"])
-          index.unique = row["unique"] == 1
-          index.columns = row["index_expression"]
-          index
-        end
+          next if row['INDEX_NAME'].blank?
+
+          IndexDefinition.new(
+            table_name,
+            row['INDEX_NAME'],
+            row['NON_UNIQUE'].zero?,
+            row['COLUMN_NAME'].split(',').map(&:strip)
+          )
+        end.compact
       end
 
       # Return the primary key
@@ -458,6 +455,9 @@ SQL
         sql = "SELECT COLUMN_NAME, IIF(COLUMN_DEF = 'NULL', null, COLUMN_DEF) as COLUMN_DEF, TYPE_NAME, NULLABLE from (EXECUTE PROCEDURE sp_GetColumns( NULL, NULL, '#{table_name}', NULL )) spgc where table_cat <> 'system';"
         structure = exec_query(sql, :skip_logging)
         raise(ActiveRecord::StatementInvalid, "Could not find table '#{table_name}'") if structure == false
+
+        # Add in a "ROWID" column to the structure?
+        structure.rows.unshift(['ROWID', nil, 'CHAR', 1]) if structure.rows.any?
         structure
       end
 
@@ -467,6 +467,17 @@ SQL
       end
 
       private
+
+      # Used in the lookup_cast_type procedure
+      def initialize_type_map(m = type_map)
+        super
+        m.alias_type %r(memo)i, "char"
+        m.alias_type %r(long binary)i, "binary"
+        m.alias_type %r(integer)i, "int"
+        m.alias_type %r(short)i, "int"
+        m.alias_type %r(autoinc)i, "int"
+        m.alias_type %r(logical)i, "boolean"
+      end
 
       # Connect
       def connect! #:nodoc:

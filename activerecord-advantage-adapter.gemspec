@@ -1,7 +1,7 @@
 lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
-pkg_version = "0.1.2"
+pkg_version = "0.1.3"
 
 Gem::Specification.new do |spec|
   spec.name = "activerecord-advantage-adapter"
