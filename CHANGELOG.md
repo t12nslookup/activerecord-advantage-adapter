@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
+## [0.1.4] - 2021-05-28
+
+No changes, trying to replace "changelog" caused me to yank, causing a version bump
 ## [0.1.3] - 2021-05-27
 
   Modified to fix a few bugs, but really to allow "rake db:schema:dump" and "annotate -sk --models" to work, as both of these required access to the indexes stored in the ADS database
