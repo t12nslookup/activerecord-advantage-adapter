@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
     spec.metadata["homepage_uri"] = spec.homepage
     # Changed to the github project, as this is the actively maintained source, now.
     spec.metadata["source_code_uri"] = "https://github.com/t12nslookup/activerecord-advantage-adapter/"
-    spec.metadata["changelog_uri"] = "https://github.com/t12nslookup/activerecord-advantage-adapter/CHANGELOG.md"
+    spec.metadata["changelog_uri"] = "https://github.com/t12nslookup/activerecord-advantage-adapter/blob/main/CHANGELOG.md"
   else
     raise "RubyGems 2.0 or newer is required to protect against " \
           "public gem pushes."
