@@ -21,37 +21,57 @@ module Arel
 
         # copied from informix.rb
         def visit_Arel_Nodes_SelectStatement(o, collector)
-          collector << "SELECT "
+          collector << 'SELECT '
           collector = maybe_visit o.limit, collector
           collector = maybe_visit o.offset, collector
-          collector = o.cores.inject(collector) { |c, x|
+          collector = o.cores.inject(collector) do |c, x|
             visit_Arel_Nodes_SelectCore x, c
-          }
+          end
           if o.orders.any?
-            collector << "ORDER BY "
-            collector = inject_join o.orders, collector, ", "
+            collector << ' ORDER BY '
+            collector = inject_join o.orders, collector, ', '
           end
           collector
         end
 
         def visit_Arel_Nodes_SelectCore(o, collector)
-          collector = inject_join o.projections, collector, ", "
+          collector = maybe_visit o.set_quantifier, collector
+          collector = inject_join o.projections, collector, ', '
           if o.source && !o.source.empty?
-            collector << " FROM "
+            collector << ' FROM '
             collector = visit o.source, collector
           end
 
           if o.wheres.any?
-            collector << " WHERE "
-            collector = inject_join o.wheres, collector, " AND "
+            collector << ' WHERE '
+            collector = inject_join o.wheres, collector, ' AND '
           end
 
           if o.groups.any?
-            collector << "GROUP BY "
-            collector = inject_join o.groups, collector, ", "
+            collector << ' GROUP BY '
+            collector = inject_join o.groups, collector, ', '
           end
 
           collector
+        end
+
+        def visit_Arel_Nodes_Distinct(o, collector)
+          collector << 'DISTINCT '
+        end
+
+        def visit_Arel_Nodes_NotEqual(o, collector)
+          right = o.right
+
+          return collector << ' 1=1' if unboundable?(right)
+
+          collector = visit o.left, collector
+
+          if right.nil?
+            collector << ' IS NOT NULL'
+          else
+            collector << ' <> '
+            visit right, collector
+          end
         end
       else
         # Rails 3 or lower

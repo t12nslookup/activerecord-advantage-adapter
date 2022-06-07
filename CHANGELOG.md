@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
+## [0.1.5] - 2022-06-07
+
+Fixes to "Order By", "Group By", "Distinct", and "Not Equal" (mostly adding in spaces)
+ 
 ## [0.1.4] - 2021-05-28
 
 No changes, trying to replace "changelog" caused me to yank, causing a version bump
