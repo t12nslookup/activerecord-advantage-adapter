@@ -13,7 +13,7 @@ module Arel
         end
 
         def visit_Arel_Nodes_Limit(o, collector)
-          collector << "TOP  "
+          collector << "TOP "
           visit o.expr, collector
           collector << " "
           collector
@@ -57,6 +57,11 @@ module Arel
 
         def visit_Arel_Nodes_Distinct(o, collector)
           collector << 'DISTINCT '
+        end
+
+        # Rails version > 5?
+        def unboundable?(value)
+          value.respond_to?(:unboundable?) && value.unboundable?
         end
 
         def visit_Arel_Nodes_NotEqual(o, collector)

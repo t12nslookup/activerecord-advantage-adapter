@@ -433,6 +433,26 @@ SQL
         execute "ALTER TABLE #{quote_table_name(table_name)} DROP #{quote_column_name(column_name)}"
       end
 
+      if Rails::VERSION::MAJOR == 5 && Rails::VERSION::MINOR < 2
+        def combine_bind_parameters(
+          from_clause: [],
+          join_clause: [],
+          where_clause: [],
+          having_clause: [],
+          limit: nil,
+          offset: nil
+        ) # :nodoc:
+          result = []
+          result << limit if limit
+          result += from_clause if from_clause.any?
+          result += join_clause if join_clause.any?
+          result += where_clause if where_clause.any?
+          result += having_clause if having_clause.any?
+          result << offset if offset
+          result
+        end
+      end
+
       protected
 
       # Execute a query
