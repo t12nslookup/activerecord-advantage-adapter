@@ -5,14 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
-## [0.1.5] - 2022-06-07
+## [0.1.6] - 2022-06-10
+
+After @swistak35 identified issues with Rails 5.0 and 5.1 Issue#1, a new `def combine_bind_parameters` was added to the connection adapter to protect against bind variables being incorrectly organised, and a new `def unboundable?` was added to the visitor to protect against the non-existence of the routine in rails < 6
+ 
+## [0.1.5] - 2022-06-07 - Yanked
 
 Fixes to "Order By", "Group By", "Distinct", and "Not Equal" (mostly adding in spaces)
  
 ## [0.1.4] - 2021-05-28
 
 No changes, trying to replace "changelog" caused me to yank, causing a version bump
-## [0.1.3] - 2021-05-27
+## [0.1.3] - 2021-05-27 - Yanked
 
   Modified to fix a few bugs, but really to allow "rake db:schema:dump" and "annotate -sk --models" to work, as both of these required access to the indexes stored in the ADS database
 
