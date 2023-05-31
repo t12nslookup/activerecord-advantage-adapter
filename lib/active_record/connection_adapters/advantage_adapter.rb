@@ -20,8 +20,8 @@
 #
 #====================================================
 
-require "active_record/connection_adapters/abstract_adapter"
-require "arel/visitors/advantage.rb"
+require 'active_record/connection_adapters/abstract_adapter'
+require 'arel/visitors/advantage'
 
 # Singleton class to hold a valid instance of the AdvantageInterface across all connections
 class ADS
@@ -59,6 +59,23 @@ module ActiveRecord
       db = ADS.instance.api.ads_new_connection()
 
       ConnectionAdapters::AdvantageAdapter.new(db, logger, connection_string)
+    end
+  end
+
+  # copied and modified from "relation/calculations.rb"
+  module Calculations
+    def count(column_name = nil)
+      if block_given?
+        unless column_name.nil?
+          raise ArgumentError, "Column name argument is not supported when a block is passed."
+        end
+        super()
+      elsif column_name.nil?
+        # ADS doesn't like counting multiple columns, so if there is no column, force the primary_key
+        calculate(:count, self.primary_key)
+      else
+        calculate(:count, column_name)
+      end
     end
   end
 
@@ -240,7 +257,7 @@ module ActiveRecord
         log(sql, 'delete', binds) { exec_query(sql, binds) }
       end
 
-      def exec_query(sql, name = "SQL", _binds = [])
+      def exec_query(sql, name = "SQL", _binds = [], **_options)
         cols, record = execute(sql, name)
         ActiveRecord::Result.new(cols, record)
       end
@@ -456,9 +473,9 @@ SQL
       protected
 
       # Execute a query
-      def select(sql, name = nil, binds = []) #:nodoc:
+      def select(sql, name = nil, binds = [], **options) #:nodoc:
         if Rails::VERSION::MAJOR >= 4
-          exec_query(sql, name, binds)
+          exec_query(sql, name, binds, **options)
         else
           exec_query(sql, name, binds).to_hash
         end
