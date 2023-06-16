@@ -518,35 +518,6 @@ SQL
         @type_map ||= Type::TypeMap.new.tap { |m| initialize_type_map(m) }
       end
 
-      #define ADS_LOGICAL 1
-      #define ADS_NUMERIC 2
-      #define ADS_DATE 3
-      #define ADS_STRING 4
-      #define ADS_MEMO 5
-      #define ADS_BINARY 6
-      #define ADS_IMAGE 7
-      #define ADS_VARCHAR 8
-      #define ADS_COMPACTDATE 9
-      #define ADS_DOUBLE 10
-      #define ADS_INTEGER 11
-      #define ADS_SHORTINT 12
-      #define ADS_TIME 13
-      #define ADS_TIMESTAMP 14
-      #define ADS_AUTOINC 15
-      #define ADS_RAW 16
-      #define ADS_CURDOUBLE 17
-      #define ADS_MONEY 18
-      #define ADS_LONGLONG 19
-      #define ADS_CISTRING 20
-      #define ADS_ROWVERSION 21
-      #define ADS_MODTIME 22
-      #define ADS_VARCHAR_FOX 23
-      #define ADS_VARBINARY_FOX 24
-      #define ADS_SYSTEM_FIELD 25
-      #define ADS_NCHAR 26
-      #define ADS_NVARCHAR 27
-      #define ADS_NMEMO 28
-
       # copied from "connection_adapters/abstract_adapter.rb"
       def register_class(mapping, key, klass)
         mapping.register_type(key) do |*args|
@@ -566,12 +537,21 @@ SQL
         register_class m, %r(float)i, Type::Float
         register_class m, %r(int)i, Type::Integer
 
-        m.alias_type %r(memo)i, "char"
+        m.alias_type %r(logical)i, "boolean"
+        m.alias_type %r(numeric)i, "decimal"
+        m.alias_type %r(string)i,  "char"
+        m.alias_type %r(memo)i,    "char"
+        m.alias_type %r(image)i,   "binary"
+        m.alias_type %r(varchar)i, "char"
+        m.alias_type %r(timestamp)i, "datetime"
+        m.alias_type %r(number)i,    "decimal"
+        m.alias_type %r(double)i,    "float"
+
         m.alias_type %r(long binary)i, "binary"
         m.alias_type %r(integer)i, "int"
         m.alias_type %r(short)i, "int"
         m.alias_type %r(autoinc)i, "int"
-        m.alias_type %r(logical)i, "boolean"
+        m.alias_type %r(raw)i, "binary"
       end
 
       # Connect
