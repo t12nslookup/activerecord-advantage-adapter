@@ -545,6 +545,7 @@ SQL
         m.alias_type %r(varchar)i, "char"
         m.alias_type %r(timestamp)i, "datetime"
         m.alias_type %r(number)i,    "decimal"
+        m.alias_type %r(money)i,    "decimal"
         m.alias_type %r(double)i,    "float"
 
         m.alias_type %r(long binary)i, "binary"
