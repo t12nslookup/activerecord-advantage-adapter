@@ -536,17 +536,18 @@ SQL
         register_class m, %r(datetime)i, Type::DateTime
         register_class m, %r(float)i, Type::Float
         register_class m, %r(int)i, Type::Integer
+        register_class m, %r(decimal)i, Type::Decimal
 
         m.alias_type %r(logical)i, "boolean"
         m.alias_type %r(numeric)i, "decimal"
-        m.alias_type %r(string)i,  "char"
-        m.alias_type %r(memo)i,    "char"
-        m.alias_type %r(image)i,   "binary"
+        m.alias_type %r(string)i, "char"
+        m.alias_type %r(memo)i, "char"
+        m.alias_type %r(image)i, "binary"
         m.alias_type %r(varchar)i, "char"
         m.alias_type %r(timestamp)i, "datetime"
-        m.alias_type %r(number)i,    "decimal"
-        m.alias_type %r(money)i,    "decimal"
-        m.alias_type %r(double)i,    "float"
+        m.alias_type %r(number)i, "decimal"
+        m.alias_type %r(money)i, "decimal"
+        m.alias_type %r(double)i, "float"
 
         m.alias_type %r(long binary)i, "binary"
         m.alias_type %r(integer)i, "int"
