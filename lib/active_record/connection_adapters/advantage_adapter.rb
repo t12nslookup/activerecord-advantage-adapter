@@ -36,28 +36,19 @@ class ADS
   end
 end
 
+if ActiveRecord::ConnectionAdapters.respond_to?(:register)
+  ActiveRecord::ConnectionAdapters.register(
+    "advantage",
+    "ActiveRecord::ConnectionAdapters::AdvantageAdapter",
+    "active_record/connection_adapters/advantage_adapter"
+  )
+end
+
 module ActiveRecord
   class Base
-    DEFAULT_CONFIG = { :username => "adssys", :password => nil }
-    # Main connection function to Advantage
-    # Connection Adapter takes four parameters:
-    # * :database (required, no default). Corresponds to "Data Source=" in connection string
-    # * :username (optional, default to 'adssys'). Correspons to "User ID=" in connection string
-    # * :password (optional, deafult to '')
-    # * :options (optional, defaults to ''). Corresponds to any additional options in connection string
-
     def self.advantage_connection(config)
-      config = DEFAULT_CONFIG.merge(config)
-
-      raise ArgumentError, "No data source was given. Please add a :database option." unless config.has_key?(:database)
-
-      connection_string = "data source=#{config[:database]};User ID=#{config[:username]};"
-      connection_string += "Password=#{config[:password]};" unless config[:password].nil?
-      connection_string += "#{config[:options]};" unless config[:options].nil?
-      connection_string += "DateFormat=YYYY-MM-DD;"
-
+      connection_string = ConnectionAdapters::AdvantageAdapter.build_connection_string(config)
       db = ADS.instance.api.ads_new_connection()
-
       ConnectionAdapters::AdvantageAdapter.new(db, logger, connection_string)
     end
   end
@@ -115,12 +106,32 @@ module ActiveRecord
     end
 
     class AdvantageAdapter < AbstractAdapter
-      def initialize(connection, logger, connection_string = "") #:nodoc:
-        super(connection, logger)
+      DEFAULT_CONFIG = { username: "adssys", password: nil }
+
+      def self.build_connection_string(config)
+        config = DEFAULT_CONFIG.merge(config.symbolize_keys)
+        cs = "data source=#{config[:database]};User ID=#{config[:username]};"
+        cs += "Password=#{config[:password]};" unless config[:password].nil?
+        cs += "#{config[:options]};" unless config[:options].nil?
+        cs += "DateFormat=YYYY-MM-DD;"
+        cs
+      end
+
+      def initialize(config_or_deprecated_connection, deprecated_logger = nil, deprecated_connection_string = "") #:nodoc:
+        if config_or_deprecated_connection.is_a?(Hash)
+          super(config_or_deprecated_connection)
+          config = config_or_deprecated_connection.symbolize_keys
+          raise ArgumentError, "No data source was given. Please add a :database option." unless config.key?(:database)
+          @connection_string = self.class.build_connection_string(config)
+          @connection = ADS.instance.api.ads_new_connection()
+        else
+          super(config_or_deprecated_connection, deprecated_logger)
+          @connection = config_or_deprecated_connection
+          @connection_string = deprecated_connection_string
+        end
         @prepared_statements = false
         @auto_commit = true
         @affected_rows = 0
-        @connection_string = connection_string
         @visitor = Arel::Visitors::Advantage.new self
         connect!
       end
@@ -148,9 +159,12 @@ module ActiveRecord
         super
       end
 
-      def reconnect! #:nodoc:
-        disconnect!
-        connect!
+      def reconnect!(restore_transactions: false) #:nodoc:
+        super
+      end
+
+      def write_query?(sql) #:nodoc:
+        false
       end
 
       def supports_count_distinct? #:nodoc:
@@ -186,8 +200,23 @@ module ActiveRecord
         }
       end
 
-      # Applies quotations around column names in generated queries
+      # AR 7.2 routes instance quote_column_name/quote_table_name through
+      # self.class.* (ClassMethods). Define both instance and class forms so
+      # the delegation chain never hits AbstractAdapter::ClassMethods which
+      # raises NotImplementedError.
+      def self.quote_column_name(name)
+        %("#{name}")
+      end
+
+      def self.quote_table_name(name)
+        %("#{name}")
+      end
+
       def quote_column_name(name) #:nodoc:
+        %("#{name}")
+      end
+
+      def quote_table_name(name) #:nodoc:
         %("#{name}")
       end
 
@@ -200,24 +229,25 @@ module ActiveRecord
       end
 
       # Translate the exception if possible
-      def translate_exception(exception, message) #:nodoc:
+      # Accept both AR < 7.2 positional (message) and AR >= 7.2 keyword args
+      def translate_exception(exception, *positional, message: nil, sql: nil, binds: nil, **) #:nodoc:
+        message = message || positional.first
         return super unless exception.respond_to?(:errno)
 
         case exception.errno
         when 2121
           if exception.sql !~ /^SELECT/i
-            raise ActiveRecord::ActiveRecordError.new(message)
+            ActiveRecord::ActiveRecordError.new(message)
           else
             super
           end
         when 7076
-          raise InvalidForeignKey.new(message, exception)
+          InvalidForeignKey.new(message, exception)
         when 7057
-          raise RecordNotUnique.new(message, exception)
+          RecordNotUnique.new(message, exception)
         else
           super
         end
-        super
       end
 
       # The database update function.
@@ -274,8 +304,13 @@ module ActiveRecord
       end
 
       # Returns a query as an array of arrays
-      def select_rows(sql, name = nil)
-        exec_query(sql, name).rows
+      def select_rows(arel, name = nil, binds = [], **kwargs)
+        exec_query(arel, name, binds).rows
+      end
+
+      def internal_exec_query(sql, name = "SQL", binds = [], **_kwargs) #:nodoc:
+        cols, record = execute(sql, name)
+        ActiveRecord::Result.new(cols, record)
       end
 
       # Begin a transaction
@@ -301,17 +336,21 @@ module ActiveRecord
       end
 
       # Advantage does not support sizing of integers based on the sytax INTEGER(size).
-      def type_to_sql(type, limit = nil, precision = nil, scale = nil) #:nodoc:
+      # Accept both AR < 7.2 positional (limit, precision, scale) and AR >= 7.2 keyword args
+      def type_to_sql(type, *positional, limit: nil, precision: nil, scale: nil, **) #:nodoc:
+        limit     = limit     || positional[0]
+        precision = precision || positional[1]
+        scale     = scale     || positional[2]
         if native_database_types[type]
           if type == :integer
             'integer'
           elsif type == :string && !limit.nil?
             "varchar (#{limit})"
           else
-            super(type, limit, precision, scale)
+            super
           end
         else
-          super(type, limit, precision, scale)
+          super
         end
       end
 
@@ -434,7 +473,7 @@ SQL
 
       # Alter a column
       def change_column(table_name, column_name, type, options = {}) #:nodoc:
-        add_column_sql = "ALTER TABLE #{quote_table_name(table_name)} ALTER #{quote_column_name(column_name)} #{quote_column_name(column_name)} #{type_to_sql(type, type_options[:limit], type_options[:precision], type_options[:scale])}"
+        add_column_sql = "ALTER TABLE #{quote_table_name(table_name)} ALTER #{quote_column_name(column_name)} #{quote_column_name(column_name)} #{type_to_sql(type, limit: type_options[:limit], precision: type_options[:precision], scale: type_options[:scale])}"
         add_column_options!(add_column_sql, options)
         execute(add_column_sql)
       end
@@ -450,7 +489,7 @@ SQL
 
       # Rename a column
       def rename_column(table_name, column_name, new_column_name) #:nodoc:
-        execute "ALTER TABLE #{quote_table_name(table_name)} ALTER #{quote_column_name(column_name)} #{quote_column_name(new_column_name)} #{type_to_sql(type, type_options[:limit], type_options[:precision], type_options[:scale])}"
+        execute "ALTER TABLE #{quote_table_name(table_name)} ALTER #{quote_column_name(column_name)} #{quote_column_name(new_column_name)} #{type_to_sql(type, limit: type_options[:limit], precision: type_options[:precision], scale: type_options[:scale])}"
       end
 
       # Drop a column from a table
@@ -563,6 +602,14 @@ SQL
           error = ADS.instance.api.ads_error(@connection)
           raise ActiveRecord::ActiveRecordError.new("#{error}: Cannot Establish Connection")
         end
+        @raw_connection = @connection
+      end
+
+      # AR 7.2 requires private #reconnect; called by the public reconnect!
+      def reconnect #:nodoc:
+        ADS.instance.api.ads_disconnect(@connection)
+        @connection = ADS.instance.api.ads_new_connection()
+        connect!
       end
 
       # The database execution function

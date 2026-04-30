@@ -1,7 +1,7 @@
 lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
-pkg_version = "0.1.8"
+pkg_version = "1.0.0"
 
 Gem::Specification.new do |spec|
   spec.name = 'activerecord-advantage-adapter'
@@ -39,10 +39,12 @@ Gem::Specification.new do |spec|
                    'activerecord-advantage-adapter.gemspec']
   spec.require_paths = ['lib']
 
+  spec.required_ruby_version = '>= 2.7'
+
   spec.add_development_dependency 'bundler', '~> 2.2.10'
   spec.add_development_dependency 'rake', '~> 12.3.3'
   spec.add_development_dependency 'rspec', '~> 3.0'
 
+  spec.add_runtime_dependency 'activerecord', '>= 7.0'
   spec.add_runtime_dependency 'advantage', '~> 0.1', '>= 0.1.2'
-  # spec.add_runtime_dependency 'activerecord', '>= 3.2.0'
 end

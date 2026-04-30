@@ -4,7 +4,17 @@ All notable changes to this project will be documented in this file.
  
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
- 
+
+## [0.1.9] - 2026-04-28
+
+### Fixed
+
+- ActiveRecord 7.2 compatibility: adapter registration, `initialize` Hash config
+  path, `translate_exception`/`type_to_sql` keyword argument signatures,
+  `write_query?`, private `reconnect`, `@raw_connection` tracking, and
+  `quote_table_name` instance+class methods to satisfy AR 7.2's quoting
+  delegation chain
+
 ## [0.1.6] - 2022-06-10
 
 After @swistak35 identified issues with Rails 5.0 and 5.1 Issue#1, a new `def combine_bind_parameters` was added to the connection adapter to protect against bind variables being incorrectly organised, and a new `def unboundable?` was added to the visitor to protect against the non-existence of the routine in rails < 6
